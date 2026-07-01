@@ -31,8 +31,7 @@ namespace MyApp
             // Give the control panel window its own little-window icon (title bar + taskbar).
             WindowIconHelper.Apply(this);
 
-            // Surface which WASDK we built against vs. which runtime is loaded.
-            BuiltAgainstVersionText.Text = WindowsAppSdkInfo.BuiltAgainstVersion;
+            // Surface which Windows App Runtime is actually loaded.
             RuntimeVersionText.Text = WindowsAppSdkInfo.RuntimeVersion;
 
             ConfigureWindowSizeAvailability();
@@ -122,14 +121,16 @@ namespace MyApp
         }
 
         private static string WindowSizeUnavailableMessage =>
-            "Window.Width / Window.Height aren't available in the Windows App SDK version this " +
-            $"app was built against ({WindowsAppSdkInfo.BuiltAgainstVersion}).";
+            "Window.Width / Window.Height aren't compiled into this build. They're guarded " +
+            "by the SupportWindowWidthHeight feature flag (see MyApp.csproj), since those " +
+            "APIs aren't in the public Windows App SDK yet.";
 
-        // The only places that touch the WASDK 3.0+ Window.Width / Height properties.
-        // They are compiled out on older versions so the app still builds and runs.
+        // The only places that touch the Window.Width / Height properties, which aren't in
+        // the public Windows App SDK yet. They're compiled in only behind the
+        // SupportWindowWidthHeight feature flag so the app still builds against public SDKs.
         private static double? GetXamlWidth(Window window)
         {
-#if WINAPPSDK_HAS_WINDOW_SIZE
+#if SupportWindowWidthHeight
             return window.Width;
 #else
             _ = window;
@@ -139,7 +140,7 @@ namespace MyApp
 
         private static double? GetXamlHeight(Window window)
         {
-#if WINAPPSDK_HAS_WINDOW_SIZE
+#if SupportWindowWidthHeight
             return window.Height;
 #else
             _ = window;
@@ -149,7 +150,7 @@ namespace MyApp
 
         private static void SetXamlSize(Window window, int width, int height)
         {
-#if WINAPPSDK_HAS_WINDOW_SIZE
+#if SupportWindowWidthHeight
             window.Width = width;
             window.Height = height;
 #else

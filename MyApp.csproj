@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
@@ -38,73 +38,33 @@
     <PublishProfile Condition="Exists('$(MSBuildProjectDirectory)\Properties\PublishProfiles\$(RuntimeIdentifier).pubxml')">$(RuntimeIdentifier).pubxml</PublishProfile>
   </PropertyGroup>
 
-  <!-- Windows App SDK version selection.
-       WindowsAppSDKVersion is an arbitrary WASDK version string (for example
-       3.0.0-dev0627-0742 or 2.2.0). The leading integer is treated as the major
-       version: major 3 or greater enables the newer XAML Window.Width / Height
-       APIs this sample uses; lower majors compile them out.
+  <!-- ============================ Feature flags ============================
+       Some Windows App SDK APIs aren't in the public SDK yet. Code that uses
+       them is guarded with #if so the app still builds against public SDKs.
 
-       Set it (in priority order):
-         1. the "Windows App SDK" page in Project Properties (VS UI)
-         2. -p:WindowsAppSDKVersion=2.2.0 on the command line
-         3. the WINAPPSDK_VERSION environment variable
-         4. the default below -->
+       Each flag is an MSBuild property whose name is IDENTICAL to the C# #if
+       symbol it turns on, so there's nothing to map. Flags default to off.
+       Turn one on for a build:
+
+           dotnet build -p:SupportWindowWidthHeight=true
+
+       (or set the property in a PropertyGroup / CI variable). In code:
+
+           #if SupportWindowWidthHeight
+               window.Width = 800;      // WASDK 3.0+ only, not in public SDK yet
+           #endif
+
+       Add a new feature later: copy the one line below and rename it. If the API
+       needs a newer SDK, bump the Microsoft.WindowsAppSDK package version too.
+       ====================================================================== -->
   <PropertyGroup>
-    <WindowsAppSDKVersion Condition="'$(WindowsAppSDKVersion)' == ''">$(WINAPPSDK_VERSION)</WindowsAppSDKVersion>
-	  <WindowsAppSDKVersion Condition="'$(WindowsAppSDKVersion)' == ''">2.*</WindowsAppSDKVersion>
-    <!--<WindowsAppSDKVersion Condition="'$(WindowsAppSDKVersion)' == ''">3.0.0-dev06301000</WindowsAppSDKVersion>-->
-
-    <!-- Leading integer of the version string = major version (0 if none). -->
-    <_WindowsAppSDKMajorVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(WindowsAppSDKVersion)', '[^0-9].*$', ''))</_WindowsAppSDKMajorVersion>
-    <_WindowsAppSDKMajorVersion Condition="'$(_WindowsAppSDKMajorVersion)' == ''">0</_WindowsAppSDKMajorVersion>
-
-    <!-- The package our version string actually feeds (see PackageReference groups
-         below): 3.0+ carries the version on the split-out WinUI package, 2.x on the
-         single meta-package. This is the package whose resolved version we report. -->
-    <_WindowsAppSDKPrimaryPackageId Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">Microsoft.WindowsAppSDK.WinUI</_WindowsAppSDKPrimaryPackageId>
-    <_WindowsAppSDKPrimaryPackageId Condition="$(_WindowsAppSDKMajorVersion) &lt; 3">Microsoft.WindowsAppSDK</_WindowsAppSDKPrimaryPackageId>
-  </PropertyGroup>
-  <ItemGroup>
-    <Page Remove="Windows\v2\TargetWindow.xaml" />
-    <Page Remove="Windows\v3\TargetWindow.xaml" />
-  </ItemGroup>
-
-  <!-- Surface the version setting on its own page in Project Properties (VS UI). -->
-  <ItemGroup>
-    <PropertyPageSchema Include="$(MSBuildProjectDirectory)\WindowsAppSDK.PropertyPage.xml">
-      <Context>Project</Context>
-    </PropertyPageSchema>
-  </ItemGroup>
-
-  <!-- Fail early and clearly if the version string is malformed. Runs during
-       restore (CollectPackageReferences) so this message wins over NuGet's. -->
-  <Target Name="ValidateWindowsAppSDKVersion" BeforeTargets="CollectPackageReferences;PrepareForBuild">
-    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(WindowsAppSDKVersion)', '^[0-9]'))" Text="WindowsAppSDKVersion '$(WindowsAppSDKVersion)' must be a WASDK version string that starts with a number, e.g. 3.0.0-dev0627-0742 or 2.2.0." />
-  </Target>
-
-  <!-- WASDK 3.0+ adds the XAML Window.Width / Height APIs. -->
-  <PropertyGroup Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">
-    <DefineConstants>$(DefineConstants);WINAPPSDK_HAS_WINDOW_SIZE</DefineConstants>
+    <DefineConstants Condition="'$(SupportWindowWidthHeight)' == 'true'">$(DefineConstants);SupportWindowWidthHeight</DefineConstants>
   </PropertyGroup>
 
-  <!-- Embed the version we built against so the app can display it at runtime.
-       "Requested" is the literal WindowsAppSDKVersion string (may be a float like 2.*).
-       "Resolved" is the concrete version NuGet picked, read from the restore graph
-       (project.assets.json) after restore but before assembly info is generated. -->
   <ItemGroup>
-    <AssemblyMetadata Include="WindowsAppSDKVersionRequested" Value="$(WindowsAppSDKVersion)" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.2.1" />
   </ItemGroup>
-
-  <Target Name="ResolveWindowsAppSDKVersion" BeforeTargets="GetAssemblyAttributes;CoreCompile" Condition="Exists('$(ProjectAssetsFile)')">
-    <PropertyGroup>
-      <_WasdkAssetsJson>$([System.IO.File]::ReadAllText('$(ProjectAssetsFile)'))</_WasdkAssetsJson>
-      <_WasdkResolvedVersion>$([System.Text.RegularExpressions.Regex]::Match($(_WasdkAssetsJson), '"$(_WindowsAppSDKPrimaryPackageId)/([^"]+)"').Groups[1].Value)</_WasdkResolvedVersion>
-      <_WasdkResolvedVersion Condition="'$(_WasdkResolvedVersion)' == ''">$(WindowsAppSDKVersion)</_WasdkResolvedVersion>
-    </PropertyGroup>
-    <ItemGroup>
-      <AssemblyMetadata Include="WindowsAppSDKVersionResolved" Value="$(_WasdkResolvedVersion)" />
-    </ItemGroup>
-  </Target>
 
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -134,43 +94,10 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
 
-  <!-- WASDK 3.0+ ships WinUI as a separate package (Microsoft.WindowsAppSDK.WinUI)
-       carrying the version string, paired with the 2.2.0 foundation package. The
-       WinUI package introduces the newer Window APIs (Window.Width / Height). -->
-  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="$(WindowsAppSDKVersion)" />
-  </ItemGroup>
-
-  <!-- WASDK 2.x ships a single package, so the newer Window APIs are unavailable
-       and the code compiles them out. -->
-  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &lt; 3">
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="$(WindowsAppSDKVersion)" />
-  </ItemGroup>
   <ItemGroup>
     <None Update="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </None>
-  </ItemGroup>
-
-  <!-- Version-specific markup: keep both TargetWindow variants out of the
-       implicit Page glob, then compile exactly one (linked to TargetWindow.xaml
-       so the generated partial class path is stable) based on the major version.
-       This is the pattern to use when markup itself differs between WASDK
-       versions, since XAML has no preprocessor. -->
-  <ItemGroup>
-    <Page Remove="Windows\v2\TargetWindow.xaml" />
-    <Page Remove="Windows\v3\TargetWindow.xaml" />
-  </ItemGroup>
-  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">
-    <Page Include="Windows\v3\TargetWindow.xaml" Link="TargetWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &lt; 3">
-    <Page Include="Windows\v2\TargetWindow.xaml" Link="TargetWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
   </ItemGroup>
 
   <!--

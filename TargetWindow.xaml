@@ -1,8 +1,11 @@
 <!--
-  Target window markup for Windows App SDK 3.0+.
-  Demonstrates markup that only the newer WASDK can parse: Window.Width / Height
-  set directly as attributes. MSBuild selects this file when the project's
-  WindowsAppSDKVersion has a major version >= 3 (see MyApp.csproj).
+  Target window markup. This is the window the Test Bench control panel drives.
+
+  It intentionally does NOT set Window.Width / Height in markup: those XAML
+  attributes don't exist in the public Windows App SDK yet. The initial size is
+  applied from code-behind instead. The Window.Width / Height *code* API is
+  compiled in only behind the SupportWindowWidthHeight feature flag (see
+  MyApp.csproj and the #if'd helpers in MainWindow.xaml.cs).
 -->
 <Window
     x:Class="MyApp.TargetWindow"
@@ -11,9 +14,7 @@
     xmlns:local="using:MyApp"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    Width="900"
-    Height="640">
+    mc:Ignorable="d">
 
     <Window.SystemBackdrop>
         <MicaBackdrop />
@@ -25,9 +26,6 @@
             <TextBlock TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        Text="This window is driven by the Test Bench control panel. Use the controls there to move, resize, change z-order, presenter, title bar and visibility of this window." />
-            <TextBlock Text="(...)"
-                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="12"
-                       HorizontalAlignment="Center" />
         </StackPanel>
     </Grid>
 </Window>

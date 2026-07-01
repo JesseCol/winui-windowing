@@ -38,9 +38,8 @@ plus a running log of Window / AppWindow events.
   (MoveInZOrderBelow) and always-on-top behavior.
 - **Visibility**: Show, Hide, hide-then-show-after-2s, and toggle IsShownInSwitchers.
 
-The panel also shows which Windows App SDK version the app was **built against** versus
-the Windows App Runtime it's actually **running against**. Those two can differ, and it's
-handy to see both.
+The panel also shows which Windows App Runtime the app is actually **running against** -
+handy to confirm which runtime a given build ended up using.
 
 ## Running it
 
@@ -77,27 +76,31 @@ Anything explicit still wins. `dotnet run -a arm64` sets the RID itself, and Vis
 Studio sets the Platform, so both are honored. The default only kicks in when nobody
 else said anything.
 
-## Picking a Windows App SDK version
+## Turning on in-progress SDK features
 
-This project can build against different WASDK versions, and some markup even changes
-between them (WASDK 3.0+ adds the XAML `Window.Width` / `Window.Height` APIs). You set
-the version with `WindowsAppSDKVersion`, in priority order:
+Some Windows App SDK APIs aren't in the public SDK yet. The code that uses them is guarded
+with `#if` so the app always builds against the public SDK. Each feature is a build flag:
+an MSBuild property whose name is *identical* to the C# `#if` symbol it turns on, so there's
+nothing to map.
 
-1. The "Windows App SDK" page in Project Properties (VS UI)
-2. `-p:WindowsAppSDKVersion=2.2.0` on the command line
-3. The `WINAPPSDK_VERSION` environment variable
-4. The default in the csproj
-
-Example:
+Today there's one flag, `SupportWindowWidthHeight`, for the XAML `Window.Width` /
+`Window.Height` APIs (WASDK 3.0+). It's off by default. Turn it on for a build:
 
 ```
-dotnet run -p:WindowsAppSDKVersion=2.2.0
+dotnet build -p:SupportWindowWidthHeight=true
 ```
 
-The leading number is treated as the major version. Major 3 or higher turns on the newer
-Window sizing APIs; lower majors compile them out. There are two `TargetWindow.xaml`
-variants under `Windows\v2` and `Windows\v3` for exactly this reason, since XAML has no
-`#if`.
+In code you guard the feature like this:
+
+```csharp
+#if SupportWindowWidthHeight
+    window.Width = 800;   // not in the public SDK yet
+#endif
+```
+
+To add a new feature flag later, copy the one line in `MyApp.csproj` (under "Feature flags")
+and rename it. If the API needs a newer SDK, bump the `Microsoft.WindowsAppSDK` package
+version too.
 
 ## Project map
 
@@ -105,10 +108,10 @@ variants under `Windows\v2` and `Windows\v3` for exactly this reason, since XAML
 MyApp/
   App.xaml(.cs)            app startup, opens MainWindow
   MainWindow.xaml(.cs)     the control panel (all the buttons live here)
-  TargetWindow.xaml.cs     the window everything gets applied to
-  Windows/v2/, Windows/v3/ version-specific TargetWindow markup
-  WindowsAppSdkInfo.cs     reports built-against vs running-against versions
-  MyApp.csproj             build config, arch default, WASDK version logic
+  TargetWindow.xaml(.cs)   the window everything gets applied to
+  WindowIconHelper.cs      sets the little-window icon on each window
+  WindowsAppSdkInfo.cs     reports the running-against runtime version
+  MyApp.csproj             build config, arch default, feature flags
 ```
 
 Have fun breaking windows.

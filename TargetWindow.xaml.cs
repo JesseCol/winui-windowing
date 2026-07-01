@@ -19,13 +19,9 @@ namespace MyApp
             // Give the target window the same little-window icon (title bar + taskbar).
             WindowIconHelper.Apply(this);
 
-            // On WASDK 3.0+ the initial size comes from the markup (Window.Width/Height
-            // in Windows\v3\TargetWindow.xaml). On older versions that markup can't exist,
-            // so apply the size from code via AppWindow.Resize.
-            if (!WindowsAppSdkInfo.IsXamlWindowSizeApiAvailable)
-            {
-                AppWindow.Resize(new SizeInt32(900, 640));
-            }
+            // The markup no longer carries an initial size, so set one here. AppWindow.Resize
+            // always exists, so this works regardless of the SupportWindowWidthHeight flag.
+            AppWindow.Resize(new SizeInt32(900, 640));
         }
     }
 }

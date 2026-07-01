@@ -1,26 +1,16 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 
 namespace MyApp
 {
     /// <summary>
-    /// Reports the Windows App SDK version this app was <b>built against</b> versus the
-    /// Windows App Runtime it is actually <b>running against</b>. These can differ: the
-    /// build version is fixed at compile time (the WindowsAppSDKVersion MSBuild property,
-    /// embedded as assembly metadata), while the runtime version is whatever framework
-    /// package / self-contained runtime is loaded into the process.
+    /// Reports the Windows App Runtime version the app is actually <b>running against</b>:
+    /// whatever framework package / self-contained runtime is loaded into the process.
+    /// Handy to confirm which runtime a given build ended up using.
     /// </summary>
     internal static class WindowsAppSdkInfo
     {
-        /// <summary>
-        /// The WASDK version the app was built against, resolved to the concrete version
-        /// NuGet picked. If the requested string was a float (e.g. "2.*") that differs
-        /// from the resolved version, both are shown as "resolved (requested)".
-        /// </summary>
-        public static string BuiltAgainstVersion { get; } = ReadBuiltAgainstVersion();
-
         /// <summary>
         /// The version of the Windows App Runtime actually loaded and in use by the
         /// process, from <c>WindowsAppRuntime.RuntimeInfo.AsString</c>. Falls back to the
@@ -30,40 +20,16 @@ namespace MyApp
 
         /// <summary>
         /// True when the XAML <see cref="Microsoft.UI.Xaml.Window.Width"/> /
-        /// <see cref="Microsoft.UI.Xaml.Window.Height"/> properties exist in the Windows
-        /// App SDK this app was built against (added in WASDK 3.0). Driven by the
-        /// WINAPPSDK_HAS_WINDOW_SIZE compile symbol set from WindowsAppSDKVersion.
+        /// <see cref="Microsoft.UI.Xaml.Window.Height"/> code API is compiled in. Driven by
+        /// the SupportWindowWidthHeight feature flag in MyApp.csproj (off by default, since
+        /// those APIs aren't in the public Windows App SDK yet).
         /// </summary>
         public static bool IsXamlWindowSizeApiAvailable =>
-#if WINAPPSDK_HAS_WINDOW_SIZE
+#if SupportWindowWidthHeight
             true;
 #else
             false;
 #endif
-
-        private static string ReadBuiltAgainstVersion()
-        {
-            string requested = ReadMetadata("WindowsAppSDKVersionRequested");
-            string resolved = ReadMetadata("WindowsAppSDKVersionResolved");
-
-            if (string.IsNullOrWhiteSpace(resolved))
-            {
-                return string.IsNullOrWhiteSpace(requested) ? "(unknown)" : requested;
-            }
-
-            // Only show the requested string too when it differs (i.e. it was a float).
-            return string.IsNullOrWhiteSpace(requested) || requested == resolved
-                ? resolved
-                : $"{resolved} (requested {requested})";
-        }
-
-        private static string ReadMetadata(string key)
-        {
-            return typeof(WindowsAppSdkInfo).Assembly
-                .GetCustomAttributes<AssemblyMetadataAttribute>()
-                .FirstOrDefault(a => a.Key == key)?
-                .Value ?? string.Empty;
-        }
 
         private static string ReadRuntimeVersion()
         {
@@ -81,7 +47,7 @@ namespace MyApp
             catch
             {
                 // API unavailable or runtime not initialized (e.g. unpackaged without the
-                // bootstrapper) — fall back to inspecting the loaded native module below.
+                // bootstrapper) - fall back to inspecting the loaded native module below.
             }
 
             // Fallback: the Windows App SDK loads native modules into the process; the

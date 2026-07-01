@@ -34,10 +34,6 @@
                     CornerRadius="6" HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal" Spacing="20">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="WindowsAppSDK (built against):" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock x:Name="BuiltAgainstVersionText" FontFamily="Consolas" IsTextSelectionEnabled="True" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="WindowsAppRuntime (running against):" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock x:Name="RuntimeVersionText" FontFamily="Consolas" IsTextSelectionEnabled="True" />
                     </StackPanel>
