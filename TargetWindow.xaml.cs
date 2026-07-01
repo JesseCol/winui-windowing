@@ -16,6 +16,9 @@ namespace MyApp
             InitializeComponent();
             Title = "Target Window";
 
+            // Give the target window the same little-window icon (title bar + taskbar).
+            WindowIconHelper.Apply(this);
+
             // On WASDK 3.0+ the initial size comes from the markup (Window.Width/Height
             // in Windows\v3\TargetWindow.xaml). On older versions that markup can't exist,
             // so apply the size from code via AppWindow.Resize.

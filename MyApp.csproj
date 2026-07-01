@@ -5,6 +5,9 @@
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>MyApp</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Icon embedded in the .exe: used by Explorer and as the default window/taskbar
+         icon. Works whether the app runs packaged or unpackaged ("dotnet run"). -->
+    <ApplicationIcon>Assets\WindowIcon.ico</ApplicationIcon>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
@@ -25,9 +28,14 @@
   </PropertyGroup>
 
   <!-- Pick the matching publish profile now that the architecture is known.
+       Only set it when the profile file actually exists (VS looks in
+       Properties\PublishProfiles\). This repo ships its publish settings inline
+       below instead of as .pubxml files, so without the Exists() guard every build
+       would warn (NETSDK1198) about a missing win-<arch>.pubxml. If per-arch
+       profiles are added later, they light up automatically.
        Kept after the block above so RuntimeIdentifier is already resolved. -->
   <PropertyGroup>
-    <PublishProfile>$(RuntimeIdentifier).pubxml</PublishProfile>
+    <PublishProfile Condition="Exists('$(MSBuildProjectDirectory)\Properties\PublishProfiles\$(RuntimeIdentifier).pubxml')">$(RuntimeIdentifier).pubxml</PublishProfile>
   </PropertyGroup>
 
   <!-- Windows App SDK version selection.
@@ -106,6 +114,11 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+    <!-- Copied next to the exe so AppWindow.SetIcon can load it at runtime
+         (title bar + taskbar) for both packaged and unpackaged runs. -->
+    <Content Include="Assets\WindowIcon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

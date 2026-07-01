@@ -28,6 +28,9 @@ namespace MyApp
 
             Title = "Window / AppWindow Test Bench (Control Panel)";
 
+            // Give the control panel window its own little-window icon (title bar + taskbar).
+            WindowIconHelper.Apply(this);
+
             // Surface which WASDK we built against vs. which runtime is loaded.
             BuiltAgainstVersionText.Text = WindowsAppSdkInfo.BuiltAgainstVersion;
             RuntimeVersionText.Text = WindowsAppSdkInfo.RuntimeVersion;
