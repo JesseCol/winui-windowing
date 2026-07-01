@@ -1,4 +1,4 @@
-# MyApp - WinUI Windowing Test Bench
+# WinUI Windowing Test Bench
 
 This is a little WinUI 3 app for poking at Windows and AppWindow features by hand.
 Think of it as a control panel with a bunch of buttons. You click a button, and a
@@ -6,6 +6,8 @@ separate "Target Window" reacts. You watch what happens.
 
 It's a test bench, not a product. The whole point is to try windowing APIs live and
 see how they behave.
+
+<img width="1778" height="858" alt="image" src="https://github.com/user-attachments/assets/4dac76c3-a11c-41c9-b9c3-7a29f06a2518" />
 
 ## What it does
 
