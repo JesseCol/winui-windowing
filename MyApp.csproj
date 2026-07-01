@@ -1,0 +1,179 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>MyApp</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <!-- Default the architecture to x64 when nothing else asks for one, so a bare
+       "dotnet run" works like "dotnet run -a x64". Anything that sets the arch
+       explicitly still wins: "dotnet run -a arm64" sets RuntimeIdentifier, and
+       Visual Studio sets Platform, both of which are honored below. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x86'">win-x86</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <!-- Pick the matching publish profile now that the architecture is known.
+       Kept after the block above so RuntimeIdentifier is already resolved. -->
+  <PropertyGroup>
+    <PublishProfile>$(RuntimeIdentifier).pubxml</PublishProfile>
+  </PropertyGroup>
+
+  <!-- Windows App SDK version selection.
+       WindowsAppSDKVersion is an arbitrary WASDK version string (for example
+       3.0.0-dev0627-0742 or 2.2.0). The leading integer is treated as the major
+       version: major 3 or greater enables the newer XAML Window.Width / Height
+       APIs this sample uses; lower majors compile them out.
+
+       Set it (in priority order):
+         1. the "Windows App SDK" page in Project Properties (VS UI)
+         2. -p:WindowsAppSDKVersion=2.2.0 on the command line
+         3. the WINAPPSDK_VERSION environment variable
+         4. the default below -->
+  <PropertyGroup>
+    <WindowsAppSDKVersion Condition="'$(WindowsAppSDKVersion)' == ''">$(WINAPPSDK_VERSION)</WindowsAppSDKVersion>
+	  <WindowsAppSDKVersion Condition="'$(WindowsAppSDKVersion)' == ''">2.*</WindowsAppSDKVersion>
+    <!--<WindowsAppSDKVersion Condition="'$(WindowsAppSDKVersion)' == ''">3.0.0-dev06301000</WindowsAppSDKVersion>-->
+
+    <!-- Leading integer of the version string = major version (0 if none). -->
+    <_WindowsAppSDKMajorVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(WindowsAppSDKVersion)', '[^0-9].*$', ''))</_WindowsAppSDKMajorVersion>
+    <_WindowsAppSDKMajorVersion Condition="'$(_WindowsAppSDKMajorVersion)' == ''">0</_WindowsAppSDKMajorVersion>
+
+    <!-- The package our version string actually feeds (see PackageReference groups
+         below): 3.0+ carries the version on the split-out WinUI package, 2.x on the
+         single meta-package. This is the package whose resolved version we report. -->
+    <_WindowsAppSDKPrimaryPackageId Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">Microsoft.WindowsAppSDK.WinUI</_WindowsAppSDKPrimaryPackageId>
+    <_WindowsAppSDKPrimaryPackageId Condition="$(_WindowsAppSDKMajorVersion) &lt; 3">Microsoft.WindowsAppSDK</_WindowsAppSDKPrimaryPackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <Page Remove="Windows\v2\TargetWindow.xaml" />
+    <Page Remove="Windows\v3\TargetWindow.xaml" />
+  </ItemGroup>
+
+  <!-- Surface the version setting on its own page in Project Properties (VS UI). -->
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildProjectDirectory)\WindowsAppSDK.PropertyPage.xml">
+      <Context>Project</Context>
+    </PropertyPageSchema>
+  </ItemGroup>
+
+  <!-- Fail early and clearly if the version string is malformed. Runs during
+       restore (CollectPackageReferences) so this message wins over NuGet's. -->
+  <Target Name="ValidateWindowsAppSDKVersion" BeforeTargets="CollectPackageReferences;PrepareForBuild">
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(WindowsAppSDKVersion)', '^[0-9]'))" Text="WindowsAppSDKVersion '$(WindowsAppSDKVersion)' must be a WASDK version string that starts with a number, e.g. 3.0.0-dev0627-0742 or 2.2.0." />
+  </Target>
+
+  <!-- WASDK 3.0+ adds the XAML Window.Width / Height APIs. -->
+  <PropertyGroup Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">
+    <DefineConstants>$(DefineConstants);WINAPPSDK_HAS_WINDOW_SIZE</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Embed the version we built against so the app can display it at runtime.
+       "Requested" is the literal WindowsAppSDKVersion string (may be a float like 2.*).
+       "Resolved" is the concrete version NuGet picked, read from the restore graph
+       (project.assets.json) after restore but before assembly info is generated. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="WindowsAppSDKVersionRequested" Value="$(WindowsAppSDKVersion)" />
+  </ItemGroup>
+
+  <Target Name="ResolveWindowsAppSDKVersion" BeforeTargets="GetAssemblyAttributes;CoreCompile" Condition="Exists('$(ProjectAssetsFile)')">
+    <PropertyGroup>
+      <_WasdkAssetsJson>$([System.IO.File]::ReadAllText('$(ProjectAssetsFile)'))</_WasdkAssetsJson>
+      <_WasdkResolvedVersion>$([System.Text.RegularExpressions.Regex]::Match($(_WasdkAssetsJson), '"$(_WindowsAppSDKPrimaryPackageId)/([^"]+)"').Groups[1].Value)</_WasdkResolvedVersion>
+      <_WasdkResolvedVersion Condition="'$(_WasdkResolvedVersion)' == ''">$(WindowsAppSDKVersion)</_WasdkResolvedVersion>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyMetadata Include="WindowsAppSDKVersionResolved" Value="$(_WasdkResolvedVersion)" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!--
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+
+  <!-- WASDK 3.0+ ships WinUI as a separate package (Microsoft.WindowsAppSDK.WinUI)
+       carrying the version string, paired with the 2.2.0 foundation package. The
+       WinUI package introduces the newer Window APIs (Window.Width / Height). -->
+  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="$(WindowsAppSDKVersion)" />
+  </ItemGroup>
+
+  <!-- WASDK 2.x ships a single package, so the newer Window APIs are unavailable
+       and the code compiles them out. -->
+  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &lt; 3">
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="$(WindowsAppSDKVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
+  </ItemGroup>
+
+  <!-- Version-specific markup: keep both TargetWindow variants out of the
+       implicit Page glob, then compile exactly one (linked to TargetWindow.xaml
+       so the generated partial class path is stable) based on the major version.
+       This is the pattern to use when markup itself differs between WASDK
+       versions, since XAML has no preprocessor. -->
+  <ItemGroup>
+    <Page Remove="Windows\v2\TargetWindow.xaml" />
+    <Page Remove="Windows\v3\TargetWindow.xaml" />
+  </ItemGroup>
+  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &gt;= 3">
+    <Page Include="Windows\v3\TargetWindow.xaml" Link="TargetWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup Condition="$(_WindowsAppSDKMajorVersion) &lt; 3">
+    <Page Include="Windows\v2\TargetWindow.xaml" Link="TargetWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <!--
+    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
+    Explorer "Package and Publish" context menu entry to be enabled for this project even if
+    the Windows App SDK Nuget package has not yet been restored.
+  -->
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <!-- Publish Properties -->
+  <PropertyGroup>
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,28 @@
+<!--
+  Target window markup for Windows App SDK 2.x.
+  The Window.Width / Height attributes don't exist here, so they're omitted and
+  the initial size is applied from code-behind (WindowSizeShim.SetSize).
+  MSBuild selects this file when WindowsAppSDKVersion has a major version < 3.
+-->
+<Window
+    x:Class="MyApp.TargetWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MyApp"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid Padding="24">
+        <StackPanel Spacing="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Target Window" Style="{StaticResource TitleTextBlockStyle}" HorizontalAlignment="Center" />
+            <TextBlock TextWrapping="Wrap" TextAlignment="Center" MaxWidth="520"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Text="This window is driven by the Test Bench control panel. Use the controls there to move, resize, change z-order, presenter, title bar and visibility of this window." />
+        </StackPanel>
+    </Grid>
+</Window>

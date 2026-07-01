@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="MyApp.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MyApp"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+
+    <Grid x:Name="RootGrid" Padding="12" RowSpacing="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1.15*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Spacing="2">
+            <TextBlock Text="Window / AppWindow Test Bench — Control Panel" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       Text="Every control below drives a separate Target Window, so this panel stays stable. The right panel shows the target's live state and a log of its Window/AppWindow events." />
+            <Border Margin="0,4,0,0" Padding="10,6"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="6" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="WindowsAppSDK (built against):" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="BuiltAgainstVersionText" FontFamily="Consolas" IsTextSelectionEnabled="True" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="WindowsAppRuntime (running against):" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="RuntimeVersionText" FontFamily="Consolas" IsTextSelectionEnabled="True" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Left: interactive controls -->
+        <ScrollViewer Grid.Row="1" Grid.Column="0" Margin="0,4,8,0">
+            <StackPanel Spacing="8">
+
+                <!-- Target Xaml Window -->
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" IsExpanded="True"
+                          Header="Target Xaml Window (Microsoft.UI.Xaml.Window)">
+                    <StackPanel Spacing="10" Margin="0,4">
+                        <Button Content="Create / Activate Target Window" Click="CreateTarget_Click" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <TextBox x:Name="WindowTitleText" Header="Window.Title" Width="240" Text="Target Window" />
+                            <Button Content="Set Window.Title" Click="SetTitle_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <InfoBar x:Name="WindowSizeUnavailableInfo" IsOpen="False" IsClosable="False"
+                                 Severity="Warning"
+                                 Title="Window.Width / Window.Height unavailable in this build" />
+                        <StackPanel x:Name="WindowSizePanel" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <NumberBox x:Name="WinWidthBox" Header="Window.Width" Width="130" Value="900" SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="WinHeightBox" Header="Window.Height" Width="130" Value="640" SpinButtonPlacementMode="Compact" />
+                            <Button x:Name="SetWindowSizeButton" Content="Set Window.Width / Height" Click="SetWindowSize_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <ToggleSwitch x:Name="ExtendContentToggle" Header="Window.ExtendsContentIntoTitleBar"
+                                          OffContent="Off" OnContent="On" Toggled="ExtendContentToggle_Toggled" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Window.Activate()" Click="Activate_Click" />
+                            <Button Content="Window.Close()" Click="Close_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- AppWindow Size & Position -->
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" IsExpanded="True"
+                          Header="AppWindow — Size &amp; Position (Microsoft.UI.Windowing.AppWindow)">
+                    <StackPanel Spacing="10" Margin="0,4">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <NumberBox x:Name="PosXBox" Header="AppWindow.Position.X" Width="160" Value="100" SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="PosYBox" Header="AppWindow.Position.Y" Width="160" Value="100" SpinButtonPlacementMode="Compact" />
+                            <Button Content="AppWindow.Move()" Click="Move_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <NumberBox x:Name="SizeWBox" Header="AppWindow.Size.Width" Width="160" Value="1000" SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="SizeHBox" Header="AppWindow.Size.Height" Width="160" Value="700" SpinButtonPlacementMode="Compact" />
+                            <Button Content="AppWindow.Resize()" Click="Resize_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <NumberBox x:Name="ClientWBox" Header="AppWindow.ClientSize.Width" Width="190" Value="1000" SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="ClientHBox" Header="AppWindow.ClientSize.Height" Width="190" Value="700" SpinButtonPlacementMode="Compact" />
+                            <Button Content="AppWindow.ResizeClient()" Click="ResizeClient_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="AppWindow.MoveAndResize() (uses Position + Size)" Click="MoveAndResize_Click" />
+                            <Button Content="Read AppWindow state &#x2192; fields" Click="PopulateFields_Click" />
+                        </StackPanel>
+                        <TextBlock Text="AppWindow.Move() to DisplayArea.WorkArea corner / center:" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Top-Left" Tag="TopLeft" Click="MoveToCorner_Click" />
+                            <Button Content="Top-Right" Tag="TopRight" Click="MoveToCorner_Click" />
+                            <Button Content="Center" Tag="Center" Click="MoveToCorner_Click" />
+                            <Button Content="Bottom-Left" Tag="BottomLeft" Click="MoveToCorner_Click" />
+                            <Button Content="Bottom-Right" Tag="BottomRight" Click="MoveToCorner_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Presenter -->
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" IsExpanded="True"
+                          Header="Presenter (OverlappedPresenter / FullScreen / CompactOverlay)">
+                    <StackPanel Spacing="10" Margin="0,4">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <ComboBox x:Name="PresenterCombo" Header="AppWindowPresenterKind" Width="200" SelectedIndex="0">
+                                <ComboBoxItem Content="Overlapped" Tag="Overlapped" />
+                                <ComboBoxItem Content="CompactOverlay" Tag="CompactOverlay" />
+                                <ComboBoxItem Content="FullScreen" Tag="FullScreen" />
+                            </ComboBox>
+                            <Button Content="AppWindow.SetPresenter()" Click="ApplyPresenter_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="MaximizeButton" Content="OverlappedPresenter.Maximize()" Click="Maximize_Click" />
+                            <Button x:Name="MinimizeButton" Content="OverlappedPresenter.Minimize()" Click="Minimize_Click" />
+                            <Button x:Name="RestoreButton" Content="OverlappedPresenter.Restore()" Click="Restore_Click" />
+                        </StackPanel>
+                        <Grid ColumnSpacing="24" RowSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <ToggleSwitch x:Name="AlwaysOnTopToggle" Header="OverlappedPresenter.IsAlwaysOnTop" Toggled="AlwaysOnTopToggle_Toggled" />
+                                <ToggleSwitch x:Name="ResizableToggle" Header="OverlappedPresenter.IsResizable" Toggled="ResizableToggle_Toggled" />
+                                <ToggleSwitch x:Name="MaximizableToggle" Header="OverlappedPresenter.IsMaximizable" Toggled="MaximizableToggle_Toggled" />
+                                <ToggleSwitch x:Name="MinimizableToggle" Header="OverlappedPresenter.IsMinimizable" Toggled="MinimizableToggle_Toggled" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <ToggleSwitch x:Name="ModalToggle" Header="OverlappedPresenter.IsModal" Toggled="ModalToggle_Toggled" />
+                                <ToggleSwitch x:Name="BorderToggle" Header="OverlappedPresenter.HasBorder" Toggled="BorderOrTitleBar_Toggled" />
+                                <ToggleSwitch x:Name="TitleBarToggle" Header="OverlappedPresenter.HasTitleBar" Toggled="BorderOrTitleBar_Toggled" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="OverlappedPresenter preferred size constraints (0 = no constraint):" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <NumberBox x:Name="MinWBox" Header="PreferredMinimumWidth" Width="175" Value="0" SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="MinHBox" Header="PreferredMinimumHeight" Width="175" Value="0" SpinButtonPlacementMode="Compact" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                            <NumberBox x:Name="MaxWBox" Header="PreferredMaximumWidth" Width="175" Value="0" SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="MaxHBox" Header="PreferredMaximumHeight" Width="175" Value="0" SpinButtonPlacementMode="Compact" />
+                            <Button x:Name="ApplyConstraintsButton" Content="Apply" Click="ApplyConstraints_Click" VerticalAlignment="Bottom" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Z-Order -->
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" IsExpanded="True"
+                          Header="AppWindow — Z-Order">
+                    <StackPanel Spacing="10" Margin="0,4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="AppWindow.MoveInZOrderAtTop()" Click="BringToTop_Click" />
+                            <Button Content="AppWindow.MoveInZOrderAtBottom()" Click="SendToBottom_Click" />
+                        </StackPanel>
+                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="Spawn a sibling window to test relative z-order (AppWindow.MoveInZOrderBelow) and always-on-top behavior:" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Spawn Sibling Window" Click="SpawnSibling_Click" />
+                            <Button Content="AppWindow.MoveInZOrderBelow(sibling)" Click="MoveBelowSibling_Click" />
+                            <Button Content="Sibling AppWindow.MoveInZOrderAtTop()" Click="SiblingToTop_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Visibility -->
+                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" IsExpanded="True"
+                          Header="AppWindow — Visibility">
+                    <StackPanel Spacing="10" Margin="0,4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="AppWindow.Show()" Click="Show_Click" />
+                            <Button Content="AppWindow.Hide()" Click="Hide_Click" />
+                            <Button Content="AppWindow.Hide() + Show() after 2s" Click="HideTemporarily_Click" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="ShownInSwitchersToggle" Header="AppWindow.IsShownInSwitchers"
+                                      Toggled="ShownInSwitchersToggle_Toggled" />
+                    </StackPanel>
+                </Expander>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Right: live state + event log -->
+        <Grid Grid.Row="1" Grid.Column="1" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="12">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Live State (Target Window)" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBlock x:Name="LiveStateText" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" IsTextSelectionEnabled="True" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="12">
+                <Grid RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <TextBlock Text="Event Log" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        <Button Content="Clear" Click="ClearLog_Click" HorizontalAlignment="Right" />
+                    </Grid>
+                    <ListView x:Name="EventLogList" Grid.Row="1" SelectionMode="None"
+                              FontFamily="Consolas" FontSize="12">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="MinHeight" Value="0" />
+                                <Setter Property="Padding" Value="6,2" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

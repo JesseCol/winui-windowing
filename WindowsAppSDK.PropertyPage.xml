@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adds a "Windows App SDK" page to Project Properties (Visual Studio UI) with a
+  text box bound to the WindowsAppSDKVersion MSBuild property. Editing it here
+  writes the value back to the project file.
+-->
+<Rule Name="WindowsAppSDK"
+      DisplayName="Windows App SDK"
+      PageTemplate="generic"
+      Description="Choose the Windows App SDK version this project builds against."
+      Order="500"
+      xmlns="http://schemas.microsoft.com/build/2009/properties">
+
+  <Rule.DataSource>
+    <DataSource Persistence="ProjectFile"
+                Label="Globals"
+                HasConfigurationCondition="False" />
+  </Rule.DataSource>
+
+  <Rule.Categories>
+    <Category Name="General" DisplayName="General" />
+  </Rule.Categories>
+
+  <StringProperty Name="WindowsAppSDKVersion"
+                  DisplayName="Windows App SDK version"
+                  Category="General"
+                  Description="An arbitrary WASDK version string, e.g. 3.0.0-dev0627-0742 or 2.2.0. The leading major version (3+) enables the newer XAML Window.Width / Height APIs; lower majors compile them out." />
+
+</Rule>
