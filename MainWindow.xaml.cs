@@ -401,8 +401,14 @@ namespace MyApp
 
         private void Activate_Click(object sender, RoutedEventArgs e)
         {
-            Log("Target Window.Activate()");
-            EnsureTargetWindow().Activate();
+            var dt = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) };
+            dt.Tick += (s, args) =>
+            {
+                Log("Target Window.Activate()");
+                EnsureTargetWindow().Activate();
+                dt.Stop();
+            };
+            dt.Start();
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)
