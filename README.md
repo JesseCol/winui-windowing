@@ -120,10 +120,10 @@ Run the setup script with the root of your local WinUI repository:
 .\Setup-InternalBuild.ps1 -WinUIRepoRoot C:\src\microsoft-ui-xaml
 ```
 
-The script reads `NuGet.config` from that repository and copies its
-`Project.Reunion.nuget.internal` source into an ignored `MyApp.local.props`. It also uses
-the repo's `PackageStore` directory whenever that directory exists. To replace an
-existing setup, add `-Force`.
+The script reads `NuGet.config` from that repository and copies its non-nuget.org remote
+package sources into an ignored `MyApp.local.props`. It also uses the repo's
+`PackageStore` directory whenever that directory exists. To replace an existing setup,
+add `-Force`.
 
 The script does not select a Windows App SDK package or enable feature flags. Choose the
 package and version in Visual Studio, then enable the flags needed by that build.

@@ -23,26 +23,27 @@ if (-not (Test-Path $nugetConfigPath -PathType Leaf)) {
 }
 
 [xml]$nugetConfig = Get-Content $nugetConfigPath -Raw
-$internalSource = $nugetConfig.configuration.packageSources.add |
+$internalSources = @($nugetConfig.configuration.packageSources.add |
     Where-Object {
-        $_.key -eq "Project.Reunion.nuget.internal" -or
-        $_.value -like "*/Project.Reunion.nuget.internal/*"
-    } |
-    Select-Object -First 1
+        $_.value -match "^https?://" -and
+        $_.value -notmatch "^https://api\.nuget\.org/"
+    })
 
-if (-not $internalSource) {
-    throw "The Project.Reunion.nuget.internal source was not found in $nugetConfigPath."
+if ($internalSources.Count -eq 0) {
+    throw "No non-nuget.org remote package sources were found in $nugetConfigPath."
 }
 
 $resolvedRepoRoot = (Resolve-Path $WinUIRepoRoot).Path
 $escapedRepoRoot = [System.Security.SecurityElement]::Escape($resolvedRepoRoot)
-$escapedInternalFeed = [System.Security.SecurityElement]::Escape($internalSource.value)
+$internalFeedValues = $internalSources | ForEach-Object { $_.value }
+$escapedInternalFeeds = [System.Security.SecurityElement]::Escape(
+    ($internalFeedValues -join ";"))
 
 $props = @"
 <Project>
   <PropertyGroup>
     <WinUIRepoRoot>$escapedRepoRoot</WinUIRepoRoot>
-    <RestoreAdditionalProjectSources>$escapedInternalFeed</RestoreAdditionalProjectSources>
+    <RestoreAdditionalProjectSources>$escapedInternalFeeds</RestoreAdditionalProjectSources>
     <RestoreAdditionalProjectSources Condition="Exists('`$(WinUIRepoRoot)\PackageStore')">`$(WinUIRepoRoot)\PackageStore;`$(RestoreAdditionalProjectSources)</RestoreAdditionalProjectSources>
   </PropertyGroup>
 </Project>
@@ -54,6 +55,7 @@ $props = @"
     [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "Created $propsPath"
-Write-Host "Internal feed: $($internalSource.value)"
+Write-Host "WinUI package source(s):"
+$internalFeedValues | ForEach-Object { Write-Host "  $_" }
 Write-Host "Local package store: $resolvedRepoRoot\PackageStore"
 Write-Host "Select the Windows App SDK package version in Visual Studio, then build normally."
