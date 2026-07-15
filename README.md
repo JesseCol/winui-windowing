@@ -29,7 +29,8 @@ plus a running log of Window / AppWindow events.
 ## Stuff you can play with
 
 - **Xaml Window** (`Microsoft.UI.Xaml.Window`): create/activate, set Title, set
-  Width/Height, extend content into the title bar, activate, close.
+  Width/Height and min/max size constraints, extend content into the title bar, activate,
+  close.
 - **AppWindow size and position** (`Microsoft.UI.Windowing.AppWindow`): Move, Resize,
   ResizeClient, MoveAndResize, and quick "snap to corner / center" buttons that use the
   DisplayArea work area.
@@ -85,11 +86,13 @@ with `#if` so the app always builds against the public SDK. Each feature is a bu
 an MSBuild property whose name is *identical* to the C# `#if` symbol it turns on, so there's
 nothing to map.
 
-Today there's one flag, `SupportWindowWidthHeight`, for the XAML `Window.Width` /
-`Window.Height` APIs (WASDK 3.0+). It's off by default. Turn it on for a build:
+The `SupportWindowWidthHeight` flag enables the XAML `Window.Width` / `Window.Height`
+APIs (WASDK 3.0+), while `SupportWindowMinMaxSize` enables `Window.MinWidth`,
+`Window.MinHeight`, `Window.MaxWidth`, and `Window.MaxHeight`. Both are off by default.
+Turn them on for a build whose Windows App SDK package contains the APIs:
 
 ```
-dotnet build -p:SupportWindowWidthHeight=true
+dotnet build -p:SupportWindowWidthHeight=true -p:SupportWindowMinMaxSize=true
 ```
 
 In code you guard the feature like this:
@@ -103,6 +106,53 @@ In code you guard the feature like this:
 To add a new feature flag later, copy the one line in `MyApp.csproj` (under "Feature flags")
 and rename it. If the API needs a newer SDK, bump the `Microsoft.WindowsAppSDK` package
 version too.
+
+## Using a local or internal Windows App SDK build
+
+The checked-in project uses the public `Microsoft.WindowsAppSDK` 2.2.0 package from
+nuget.org.
+
+### Microsoft internal setup
+
+Run the setup script with the root of your local WinUI repository:
+
+```powershell
+.\Setup-InternalBuild.ps1 -WinUIRepoRoot C:\src\microsoft-ui-xaml
+```
+
+The script reads `NuGet.config` from that repository and copies its
+`Project.Reunion.nuget.internal` source into an ignored `MyApp.local.props`. It also uses
+the repo's `PackageStore` directory whenever that directory exists. To replace an
+existing setup, add `-Force`.
+
+The script does not select a Windows App SDK package or enable feature flags. Choose the
+package and version in Visual Studio, then enable the flags needed by that build.
+
+The internal feed URL is never stored in this public repository. It exists only in the
+local WinUI checkout and the generated ignored props file, so public restores never
+contact it.
+
+### Manual or custom setup
+
+To use different package sources, create an ignored `MyApp.local.props` file next to
+`MyApp.csproj`:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <WinUIRepoRoot>C:\path\to\microsoft-ui-xaml</WinUIRepoRoot>
+    <RestoreAdditionalProjectSources>
+      https://your-private-feed/v3/index.json
+    </RestoreAdditionalProjectSources>
+    <RestoreAdditionalProjectSources Condition="Exists('$(WinUIRepoRoot)\PackageStore')">
+      $(WinUIRepoRoot)\PackageStore;$(RestoreAdditionalProjectSources)
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+</Project>
+```
+
+Because `*.local.props` is ignored, each developer can select local package stores or
+private feeds without making public restores contact those feeds.
 
 ## Project map
 

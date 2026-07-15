@@ -11,9 +11,18 @@
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <!-- Optional machine-local overrides for internal or locally built SDK packages. -->
+  <Import Project="MyApp.local.props" Condition="Exists('MyApp.local.props')" />
+
+  <PropertyGroup>
+    <WindowsAppSdkPackageId Condition="'$(WindowsAppSdkPackageId)' == ''">Microsoft.WindowsAppSDK</WindowsAppSdkPackageId>
+    <WindowsAppSdkPackageVersion Condition="'$(WindowsAppSdkPackageVersion)' == ''">2.2.0</WindowsAppSdkPackageVersion>
   </PropertyGroup>
 
   <!-- Default the architecture to x64 when nothing else asks for one, so a bare
@@ -58,12 +67,14 @@
        needs a newer SDK, bump the Microsoft.WindowsAppSDK package version too.
        ====================================================================== -->
   <PropertyGroup>
+    <SupportWindowWidthHeight Condition="'$(SupportWindowWidthHeight)' == ''">false</SupportWindowWidthHeight>
+    <SupportWindowMinMaxSize Condition="'$(SupportWindowMinMaxSize)' == ''">false</SupportWindowMinMaxSize>
     <DefineConstants Condition="'$(SupportWindowWidthHeight)' == 'true'">$(DefineConstants);SupportWindowWidthHeight</DefineConstants>
+    <DefineConstants Condition="'$(SupportWindowMinMaxSize)' == 'true'">$(DefineConstants);SupportWindowMinMaxSize</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.2.0" />
-    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.2.2-experimental" />
+    <PackageReference Include="$(WindowsAppSdkPackageId)" Version="$(WindowsAppSdkPackageVersion)" />
   </ItemGroup>
 
   <ItemGroup>

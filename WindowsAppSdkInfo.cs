@@ -31,6 +31,16 @@ namespace MyApp
             false;
 #endif
 
+        /// <summary>
+        /// True when the XAML Window min/max size constraint APIs are compiled in.
+        /// </summary>
+        public static bool IsXamlWindowMinMaxSizeApiAvailable =>
+#if SupportWindowMinMaxSize
+            true;
+#else
+            false;
+#endif
+
         private static string ReadRuntimeVersion()
         {
             // Preferred: the Windows App SDK runtime-version API. RuntimeInfo reports the

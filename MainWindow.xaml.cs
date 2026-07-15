@@ -120,10 +120,25 @@ namespace MyApp
             return value.HasValue ? value.Value.ToString("0.##") : "n/a";
         }
 
+        private static string FormatConstraint(double value)
+        {
+            return double.IsPositiveInfinity(value) ? "unbounded" : value.ToString("0.##");
+        }
+
+        private static bool ConstraintValuesMatch(double expected, double actual)
+        {
+            return expected.Equals(actual) || Math.Abs(expected - actual) < 0.01;
+        }
+
         private static string WindowSizeUnavailableMessage =>
             "Window.Width / Window.Height aren't compiled into this build. They're guarded " +
             "by the SupportWindowWidthHeight feature flag (see MyApp.csproj), since those " +
             "APIs aren't in the public Windows App SDK yet.";
+
+        private static string WindowMinMaxSizeUnavailableMessage =>
+            "Window.MinWidth / MinHeight / MaxWidth / MaxHeight aren't compiled into this " +
+            "build. They're guarded by the SupportWindowMinMaxSize feature flag (see " +
+            "MyApp.csproj), since many Windows App SDK packages don't contain these APIs.";
 
         // The only places that touch the Window.Width / Height properties, which aren't in
         // the public Windows App SDK yet. They're compiled in only behind the
@@ -135,6 +150,33 @@ namespace MyApp
 #else
             _ = window;
             return null;
+#endif
+        }
+
+        private static (double MinWidth, double MinHeight, double MaxWidth, double MaxHeight)? GetXamlMinMaxSize(Window window)
+        {
+#if SupportWindowMinMaxSize
+            return (window.MinWidth, window.MinHeight, window.MaxWidth, window.MaxHeight);
+#else
+            _ = window;
+            return null;
+#endif
+        }
+
+        private static void SetXamlMinMaxSize(Window window, double minWidth, double minHeight, double maxWidth, double maxHeight)
+        {
+#if SupportWindowMinMaxSize
+            window.MinWidth = 0;
+            window.MinHeight = 0;
+            window.MaxWidth = double.PositiveInfinity;
+            window.MaxHeight = double.PositiveInfinity;
+
+            window.MaxWidth = maxWidth;
+            window.MaxHeight = maxHeight;
+            window.MinWidth = minWidth;
+            window.MinHeight = minHeight;
+#else
+            _ = (window, minWidth, minHeight, maxWidth, maxHeight);
 #endif
         }
 
@@ -177,6 +219,21 @@ namespace MyApp
                 ToolTipService.SetToolTip(WindowSizePanel, WindowSizeUnavailableMessage);
                 // A tooltip on a disabled button is suppressed, so put it on the wrapper too.
                 ToolTipService.SetToolTip(SetWindowSizeButton, WindowSizeUnavailableMessage);
+            }
+
+            bool minMaxAvailable = WindowsAppSdkInfo.IsXamlWindowMinMaxSizeApiAvailable;
+
+            WindowMinMaxSizeUnavailableInfo.IsOpen = !minMaxAvailable;
+            WinMinWidthBox.IsEnabled = minMaxAvailable;
+            WinMinHeightBox.IsEnabled = minMaxAvailable;
+            WinMaxWidthBox.IsEnabled = minMaxAvailable;
+            WinMaxHeightBox.IsEnabled = minMaxAvailable;
+            SetWindowMinMaxSizeButton.IsEnabled = minMaxAvailable;
+
+            if (!minMaxAvailable)
+            {
+                WindowMinMaxSizeUnavailableInfo.Message = WindowMinMaxSizeUnavailableMessage;
+                ToolTipService.SetToolTip(WindowMinMaxSizePanel, WindowMinMaxSizeUnavailableMessage);
             }
         }
 
@@ -229,6 +286,15 @@ namespace MyApp
             sb.AppendLine("[Target Xaml Window]");
             sb.AppendLine($"  Title                 : {target.Title}");
             sb.AppendLine($"  Width x Height        : {FormatDip(GetXamlWidth(target))} x {FormatDip(GetXamlHeight(target))}");
+            if (GetXamlMinMaxSize(target) is { } minMaxSize)
+            {
+                sb.AppendLine($"  MinWidth x MinHeight  : {minMaxSize.MinWidth:0.##} x {minMaxSize.MinHeight:0.##}");
+                sb.AppendLine($"  MaxWidth x MaxHeight  : {FormatConstraint(minMaxSize.MaxWidth)} x {FormatConstraint(minMaxSize.MaxHeight)}");
+            }
+            else
+            {
+                sb.AppendLine("  Min/Max constraints   : n/a");
+            }
             sb.AppendLine($"  Bounds (W x H)        : {target.Bounds.Width:0.##} x {target.Bounds.Height:0.##}");
             sb.AppendLine($"  Visible               : {target.Visible}");
             sb.AppendLine($"  ExtendsContentIntoTitleBar : {target.ExtendsContentIntoTitleBar}");
@@ -315,6 +381,13 @@ namespace MyApp
                 WindowTitleText.Text = target.Title;
                 WinWidthBox.Value = GetXamlWidth(target) ?? appWindow.Size.Width;
                 WinHeightBox.Value = GetXamlHeight(target) ?? appWindow.Size.Height;
+                if (GetXamlMinMaxSize(target) is { } minMaxSize)
+                {
+                    WinMinWidthBox.Value = minMaxSize.MinWidth;
+                    WinMinHeightBox.Value = minMaxSize.MinHeight;
+                    WinMaxWidthBox.Value = double.IsPositiveInfinity(minMaxSize.MaxWidth) ? 0 : minMaxSize.MaxWidth;
+                    WinMaxHeightBox.Value = double.IsPositiveInfinity(minMaxSize.MaxHeight) ? 0 : minMaxSize.MaxHeight;
+                }
                 ExtendContentToggle.IsOn = target.ExtendsContentIntoTitleBar;
 
                 PosXBox.Value = appWindow.Position.X;
@@ -378,6 +451,67 @@ namespace MyApp
             int height = ReadInt(WinHeightBox);
             SetXamlSize(target, width, height);
             Log($"Target Window.Width/Height = {width} x {height}");
+            UpdateLiveState();
+        }
+
+        private void SetWindowMinMaxSize_Click(object sender, RoutedEventArgs e)
+        {
+            if (!WindowsAppSdkInfo.IsXamlWindowMinMaxSizeApiAvailable)
+            {
+                Log(WindowMinMaxSizeUnavailableMessage);
+                return;
+            }
+
+            double minWidth = WinMinWidthBox.Value;
+            double minHeight = WinMinHeightBox.Value;
+            double maxWidthInput = WinMaxWidthBox.Value;
+            double maxHeightInput = WinMaxHeightBox.Value;
+
+            if (!double.IsFinite(minWidth) || !double.IsFinite(minHeight) ||
+                !double.IsFinite(maxWidthInput) || !double.IsFinite(maxHeightInput))
+            {
+                Log("Window min/max constraints rejected: all fields must contain finite numbers.");
+                return;
+            }
+
+            minWidth = Math.Max(0, minWidth);
+            minHeight = Math.Max(0, minHeight);
+            double maxWidth = maxWidthInput > 0 ? maxWidthInput : double.PositiveInfinity;
+            double maxHeight = maxHeightInput > 0 ? maxHeightInput : double.PositiveInfinity;
+
+            if (minWidth > maxWidth || minHeight > maxHeight)
+            {
+                Log("Window min/max constraints rejected: each minimum must be less than or equal to its maximum.");
+                return;
+            }
+
+            TargetWindow target = EnsureTargetWindow();
+            SetXamlMinMaxSize(target, minWidth, minHeight, maxWidth, maxHeight);
+
+            if (GetXamlMinMaxSize(target) is not { } actual)
+            {
+                Log("Window constraint validation unavailable in this build.");
+                return;
+            }
+
+            bool valuesMatch =
+                ConstraintValuesMatch(minWidth, actual.MinWidth) &&
+                ConstraintValuesMatch(minHeight, actual.MinHeight) &&
+                ConstraintValuesMatch(maxWidth, actual.MaxWidth) &&
+                ConstraintValuesMatch(maxHeight, actual.MaxHeight);
+
+            Log($"Window constraint read-back {(valuesMatch ? "PASSED" : "FAILED")}: " +
+                $"requested Min({minWidth:0.##} x {minHeight:0.##}) " +
+                $"Max({FormatConstraint(maxWidth)} x {FormatConstraint(maxHeight)}); " +
+                $"actual Min({actual.MinWidth:0.##} x {actual.MinHeight:0.##}) " +
+                $"Max({FormatConstraint(actual.MaxWidth)} x {FormatConstraint(actual.MaxHeight)})");
+
+            if (valuesMatch)
+            {
+                Log("The XAML properties accepted the requested values. Resizing below them after this point indicates a runtime enforcement issue, not an app setter issue.");
+            }
+
+            SyncControlsFromState();
             UpdateLiveState();
         }
 
